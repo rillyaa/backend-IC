@@ -1,4 +1,5 @@
 const pool = require('../../config/database');
+const bcrypt = require('bcrypt');
 
 module.exports = {
     checkUserExists: (username, email, callback) => {
@@ -20,24 +21,68 @@ module.exports = {
         );
     },
     create: (data, callback) => {
-        pool.query(
-            `insert into users(username, email, password) VALUES (?,?,?)`,
-            [
-                data.username,
-                data.email,
-                data.password
-            ],
-            ( error, results, fields ) => {
-                if(error) {
-                    return callback(error)
+        // Pastikan data.role adalah salah satu dari nilai yang diizinkan
+        const allowedRoles = ['Developer', 'Investor'];
+        if (!allowedRoles.includes(data.role)) {
+            const error = new Error('Invalid role');
+            return callback(error);
+        }
+    
+        // Gunakan bcrypt untuk meng-hash password sebelum menyimpannya di database
+        bcrypt.hash(data.password, 10, (hashError, hashedPassword) => {
+        if (hashError) {
+            return callback(hashError);
+        }
+    
+            // Setelah password di-hash, tambahkan pengguna ke database
+            pool.query(
+                `INSERT INTO users(username, email, password, role) VALUES (?, ?, ?, ?)`,
+                [
+                    data.username,
+                    data.email,
+                    hashedPassword, // Gunakan hashedPassword
+                    data.role
+                ],
+                (error, results, fields) => {
+                    if (error) {
+                        return callback(error);
+                    }
+                    return callback(null, results);
                 }
-                return callback(null, results)
-            }
-        );
+            );
+        });
     },
+    // create: (data, callback) => {
+    //     const allowedRoles = ['Developer', 'Investor'];
+    //     if (!allowedRoles.includes(data.role)) {
+    //         const error = new Error('Invalid role');
+    //         return callback(error);
+    //     }
+
+    //     bcrypt.hash(data.password, 10, (hashError, hashedPassword) => {
+    //     if (hashError) {
+    //         return callback(hashError);
+    //     }
+
+    //     pool.query(
+    //         `insert into users(username, email, password, role) VALUES (?,?,?,?)`,
+    //         [
+    //             data.username,
+    //             data.email,
+    //             data.password,
+    //             data.role
+    //         ],
+    //         ( error, results, fields ) => {
+    //             if(error) {
+    //                 return callback(error)
+    //             }
+    //             return callback(null, results)
+    //         }
+    //     );
+    // },
     getUsers: callback => {
         pool.query(
-            `select id, username, email from users`,
+            `select id, username, email, role from users`,
             [],
             (error, results, fields) => {
                 if(error) {
@@ -49,7 +94,7 @@ module.exports = {
     },
     getUserByID: (id, callback) => {
         pool.query(
-            `select id, username, email from users where id = ?`,
+            `select id, username, email, role from users where id = ?`,
             [id],
             (error, results, fields) => {
                 if(error) {
@@ -130,5 +175,4 @@ module.exports = {
             );
         });
     }
-    
 };

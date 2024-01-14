@@ -156,6 +156,7 @@ module.exports = {
             const results = await getUserbyEmail(email);
     
             if (!results) {
+                console.error('User not found for email:', email);
                 return res.json({
                     error: true,
                     message: 'Invalid email or password'
@@ -166,7 +167,7 @@ module.exports = {
     
             if (passwordMatch) {
                 results.password = undefined;
-                const jsontoken = sign({ result: results }, process.env.SECRET_KEY, {
+                const jsontoken = sign({ result: results }, 'ideasconnect', {
                     expiresIn: '1h'
                 });
     
@@ -176,6 +177,8 @@ module.exports = {
                     loginResult: {
                         userId: results.id,
                         name: results.username,
+                        email: results.email,
+                        role: results.role,
                         token: jsontoken
                     }
                 });
